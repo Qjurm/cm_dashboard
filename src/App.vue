@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen p-4 md:p-6 max-w-7xl mx-auto bg-slate-50/50">
+  <div class="min-h-screen p-4 md:p-6 w-full bg-slate-50/50">
     <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
       <div>
         <h1 class="text-3xl font-bold text-slate-900">CM Game Dashboard</h1>
@@ -81,9 +81,9 @@
 
     </section>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-      <div class="space-y-6 lg:col-start-3">
+      <div class="space-y-6 lg:col-start-4">
 
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
           <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">
@@ -125,9 +125,9 @@
 
       </div>
 
-      <div class="lg:col-span-2 space-y-6 lg:row-start-1">
+      <div class="lg:col-span-3 space-y-6 lg:row-start-1">
 
-        <div v-if="filteredParticipants.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div v-if="filteredParticipants.length > 0" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           <div
             v-for="scenario in pieChartData"
             :key="scenario.id"
@@ -194,20 +194,22 @@
                   </div>
                 </div>
 
-                <div class="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+                <div class="flex gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar flex-1">
                   <div
                     v-for="choice in entry.choices"
                     :key="choice.scenarioId"
-                    class="flex flex-col items-center justify-center bg-slate-50 border border-slate-100 rounded px-2 py-1 min-w-[60px]"
+                    class="flex flex-col items-center justify-center border rounded-md px-3 py-2 min-w-[90px]"
+                    :style="{
+                      backgroundColor: getColorForLabel(choice.choice) + '15', // 15 = low opacity hex
+                      borderColor: getColorForLabel(choice.choice) + '40',     // 40 = medium opacity hex
+                      color: getColorForLabel(choice.choice)
+                    }"
                     :title="`Scenario ${choice.scenarioId}`"
                   >
-                    <div
-                      class="text-[10px] font-bold capitalize truncate max-w-[60px]"
-                      :style="{ color: getColorForLabel(choice.choice) }"
-                    >
+                    <div class="text-xs font-bold capitalize truncate max-w-[80px]">
                       {{ choice.choice }}
                     </div>
-                    <div class="text-[9px] font-mono text-slate-400">
+                    <div class="text-[11px] font-mono opacity-80 mt-0.5">
                       {{ formatTime(choice.timeToDecide) }}
                     </div>
                   </div>
@@ -269,7 +271,6 @@ const participants = computed(() => {
       const g = (p.participant?.gender || 'unknown').trim().toLowerCase()
       p.normalizedGender = g.charAt(0).toUpperCase() + g.slice(1)
 
-      // Ensure date object exists for sorting
       p.completedDate = p.completedAt ? new Date(p.completedAt) : new Date(0)
 
       return p
@@ -279,9 +280,7 @@ const participants = computed(() => {
 
 // Calculate the IDs of the 30 oldest participants (The Prototype Data)
 const oldest30Ids = computed(() => {
-  // Sort ALL participants by date ascending (Oldest first)
   const sorted = [...participants.value].sort((a, b) => a.completedDate - b.completedDate)
-  // Take the first 30 IDs
   return sorted.slice(0, 30).map(p => p.participantId)
 })
 
@@ -293,7 +292,7 @@ const uniqueGenders = computed(() => {
 const filteredParticipants = computed(() => {
   let result = [...participants.value]
 
-  // 1. Prototype Filter (Exclude oldest 30 if toggle is OFF)
+  // 1. Prototype Filter
   if (!includePrototype.value) {
     const idsToHide = new Set(oldest30Ids.value)
     result = result.filter(p => !idsToHide.has(p.participantId))
@@ -326,13 +325,10 @@ const filteredParticipants = computed(() => {
 })
 
 // --- STATS ---
-
-// Total Decisions
 const totalDecisions = computed(() => {
   return filteredParticipants.value.reduce((total, p) => total + (p.choices?.length || 0), 0)
 })
 
-// Pie Data
 const pieChartData = computed(() => {
   const scenarios = {}
   filteredParticipants.value.forEach(p => {
@@ -364,7 +360,6 @@ const pieChartData = computed(() => {
     })
 })
 
-// Avg Time Stats
 const scenarioTimeStats = computed(() => {
   const stats = {}
   filteredParticipants.value.forEach(p => {
@@ -418,7 +413,6 @@ const getColorForLabel = (label) => {
 // --- FETCH ---
 const fetchData = async () => {
   loading.value = true
-  // Removed .range() so we have full control in JS
   const { data, error } = await supabase
     .from(TABLE_NAME)
     .select('*')
