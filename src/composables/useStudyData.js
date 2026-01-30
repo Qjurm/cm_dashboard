@@ -16,12 +16,17 @@ export function useStudyData(tableName = 'study_results') {
   const participants = computed(() => {
     return rawRows.value.map(row => {
       try {
+        // If data is already an object, use it; otherwise parse string
         const p = typeof row.data === 'string' ? JSON.parse(row.data) : row.data
+
+        // Calculate total time for sorting
         p.totalTime = p.choices?.reduce((sum, c) => sum + (Number(c.timeToDecide) || 0), 0) || 0
 
+        // Normalize Gender
         const g = (p.participant?.gender || 'unknown').trim().toLowerCase()
         p.normalizedGender = g.charAt(0).toUpperCase() + g.slice(1)
 
+        // Date object for sorting
         p.completedDate = p.completedAt ? new Date(p.completedAt) : new Date(0)
         return p
       } catch (e) { return null }
@@ -125,7 +130,65 @@ export function useStudyData(tableName = 'study_results') {
       }))
   })
 
-  // --- Actions ---
+  // --- ACTIONS ---
+
+  // NEW: Import CSV Logic
+  const importData = (csvContent) => {
+    const lines = csvContent.split('\n').filter(l => l.trim().length > 0)
+    if (lines.length < 2) return // No data
+
+    // Skip header row
+    const dataLines = lines.slice(1)
+    const participantsMap = {}
+
+    dataLines.forEach(line => {
+      // Regex to handle CSV quoted strings (e.g. "Name, Surname", "Value")
+      const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)
+      if (!matches) return
+
+      const cols = matches.map(val => val.replace(/^"|"$/g, '').replace(/""/g, '"'))
+
+      // Expected Columns based on Export:
+      // 0:ID, 1:Name, 2:Surname, 3:Gender, 4:Age, 5:CompletedAt, 6:ScenarioID, 7:Choice, 8:Time
+
+      const pId = cols[0]
+      if (!pId) return
+
+      if (!participantsMap[pId]) {
+        participantsMap[pId] = {
+          participantId: pId,
+          participant: {
+            name: cols[1],
+            surname: cols[2],
+            gender: cols[3],
+            age: cols[4]
+          },
+          completedAt: cols[5],
+          choices: [],
+          isImported: true // Helper flag if we want to show it in UI
+        }
+      }
+
+      participantsMap[pId].choices.push({
+        scenarioId: Number(cols[6]),
+        choice: cols[7],
+        timeToDecide: Number(cols[8]),
+        timestamp: new Date().toISOString() // Placeholder as export doesn't have per-choice timestamp
+      })
+    })
+
+    // Convert map to array and add to rawRows
+    const newRows = Object.values(participantsMap).map(p => ({
+      // Wrap in 'data' to match Supabase structure
+      data: p,
+      filename: `imported-${p.participantId}.json`,
+      created_at: new Date().toISOString()
+    }))
+
+    // Add to top of list
+    rawRows.value = [...newRows, ...rawRows.value]
+  }
+
   const resetFilters = () => {
     searchQuery.value = ''
     selectedGender.value = ''
@@ -145,7 +208,6 @@ export function useStudyData(tableName = 'study_results') {
     loading.value = false
   }
 
-  // --- Lifecycle ---
   onMounted(() => {
     fetchData()
     supabase.channel('realtime-study')
@@ -166,6 +228,7 @@ export function useStudyData(tableName = 'study_results') {
     totalDecisions,
     pieChartData,
     scenarioTimeStats,
-    resetFilters
+    resetFilters,
+    importData // Exporting the new function
   }
 }

@@ -57,7 +57,27 @@
           {{ includePrototype ? 'Including Old Prototype Data (30)' : 'Hiding Old Prototype Data' }}
         </button>
 
-        <!-- NIEUW: Copy Button -->
+        <!-- Hidden File Input for Import -->
+        <input
+          type="file"
+          ref="fileInput"
+          class="hidden"
+          accept=".csv"
+          @change="handleFileUpload"
+        >
+
+        <!-- Import Button -->
+        <button
+          @click="$refs.fileInput.click()"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Import CSV
+        </button>
+
+        <!-- Copy Button -->
         <button
           @click="handleCopy"
           class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
@@ -93,9 +113,10 @@ const props = defineProps({
   uniqueGenders: Array
 })
 
-const emit = defineEmits(['update:searchQuery', 'update:selectedGender', 'update:sortBy', 'update:includePrototype', 'reset', 'copy'])
+const emit = defineEmits(['update:searchQuery', 'update:selectedGender', 'update:sortBy', 'update:includePrototype', 'reset', 'copy', 'import'])
 
 const copied = ref(false)
+const fileInput = ref(null)
 
 const handleCopy = () => {
   emit('copy')
@@ -103,5 +124,18 @@ const handleCopy = () => {
   setTimeout(() => {
     copied.value = false
   }, 2000)
+}
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    emit('import', e.target.result)
+    // Reset input so same file can be selected again if needed
+    event.target.value = ''
+  }
+  reader.readAsText(file)
 }
 </script>

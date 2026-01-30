@@ -14,6 +14,7 @@
       :uniqueGenders="uniqueGenders"
       @reset="resetFilters"
       @copy="copyToClipboard"
+      @import="importData"
     />
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -56,23 +57,18 @@ const {
   searchQuery, selectedGender, sortBy, includePrototype,
   uniqueGenders, filteredParticipants,
   totalDecisions, pieChartData, scenarioTimeStats,
-  resetFilters
+  resetFilters, importData
 } = useStudyData()
 
 // --- Copy to Clipboard Function (CSV Format) ---
 const copyToClipboard = () => {
-  // 1. Define Headers
   const headers = ['ParticipantID', 'Name', 'Surname', 'Gender', 'Age', 'CompletedAt', 'ScenarioID', 'Choice', 'TimeToDecide(ms)']
-
-  // 2. Build Rows (Flatten logic: one row per choice)
   const rows = []
 
   filteredParticipants.value.forEach(p => {
     if (p.choices && Array.isArray(p.choices)) {
       p.choices.forEach(c => {
-        // Escape helper for CSV (handles commas in names etc)
         const safe = (val) => `"${String(val || '').replace(/"/g, '""')}"`
-
         rows.push([
           safe(p.participantId),
           safe(p.participant?.name),
@@ -88,7 +84,6 @@ const copyToClipboard = () => {
     }
   })
 
-  // 3. Combine and Copy
   const csvContent = headers.join(',') + '\n' + rows.join('\n')
   navigator.clipboard.writeText(csvContent).then(() => {
     console.log('Data copied to clipboard!')
