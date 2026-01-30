@@ -13,6 +13,7 @@
       v-model:includePrototype="includePrototype"
       :uniqueGenders="uniqueGenders"
       @reset="resetFilters"
+      @copy="copyToClipboard"
     />
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -57,4 +58,42 @@ const {
   totalDecisions, pieChartData, scenarioTimeStats,
   resetFilters
 } = useStudyData()
+
+// --- Copy to Clipboard Function (CSV Format) ---
+const copyToClipboard = () => {
+  // 1. Define Headers
+  const headers = ['ParticipantID', 'Name', 'Surname', 'Gender', 'Age', 'CompletedAt', 'ScenarioID', 'Choice', 'TimeToDecide(ms)']
+
+  // 2. Build Rows (Flatten logic: one row per choice)
+  const rows = []
+
+  filteredParticipants.value.forEach(p => {
+    if (p.choices && Array.isArray(p.choices)) {
+      p.choices.forEach(c => {
+        // Escape helper for CSV (handles commas in names etc)
+        const safe = (val) => `"${String(val || '').replace(/"/g, '""')}"`
+
+        rows.push([
+          safe(p.participantId),
+          safe(p.participant?.name),
+          safe(p.participant?.surname),
+          safe(p.participant?.gender),
+          safe(p.participant?.age),
+          safe(p.completedAt),
+          safe(c.scenarioId),
+          safe(c.choice),
+          safe(c.timeToDecide)
+        ].join(','))
+      })
+    }
+  })
+
+  // 3. Combine and Copy
+  const csvContent = headers.join(',') + '\n' + rows.join('\n')
+  navigator.clipboard.writeText(csvContent).then(() => {
+    console.log('Data copied to clipboard!')
+  }).catch(err => {
+    console.error('Failed to copy: ', err)
+  })
+}
 </script>

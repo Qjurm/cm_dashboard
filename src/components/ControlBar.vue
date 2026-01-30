@@ -44,7 +44,8 @@
 
     <!-- Bottom Row -->
     <div class="flex flex-wrap items-center justify-between border-t border-slate-100 pt-4 gap-4">
-      <div class="flex items-center">
+      <div class="flex items-center gap-4">
+        <!-- Prototype Toggle -->
         <button
           @click="$emit('update:includePrototype', !includePrototype)"
           class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border"
@@ -54,6 +55,20 @@
         >
           <span class="w-2 h-2 rounded-full" :class="includePrototype ? 'bg-amber-500' : 'bg-slate-400'"></span>
           {{ includePrototype ? 'Including Old Prototype Data (30)' : 'Hiding Old Prototype Data' }}
+        </button>
+
+        <!-- NIEUW: Copy Button -->
+        <button
+          @click="handleCopy"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200 border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+        >
+          <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          {{ copied ? 'Copied CSV!' : 'Copy Filtered Data' }}
         </button>
       </div>
 
@@ -68,7 +83,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { ref } from 'vue'
+
+const props = defineProps({
   searchQuery: String,
   selectedGender: String,
   sortBy: String,
@@ -76,5 +93,15 @@ defineProps({
   uniqueGenders: Array
 })
 
-defineEmits(['update:searchQuery', 'update:selectedGender', 'update:sortBy', 'update:includePrototype', 'reset'])
+const emit = defineEmits(['update:searchQuery', 'update:selectedGender', 'update:sortBy', 'update:includePrototype', 'reset', 'copy'])
+
+const copied = ref(false)
+
+const handleCopy = () => {
+  emit('copy')
+  copied.value = true
+  setTimeout(() => {
+    copied.value = false
+  }, 2000)
+}
 </script>
